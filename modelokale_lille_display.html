@@ -3,16 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="refresh" content="900"><!-- reload every 15 min -->
-  <style>
-    html,body{margin:0;height:100%;background:#111;color:#fff;font-family:system-ui}
-    #calendar{height:100%}
-    /* quick corporate colour tweak */
-    .fc .fc-toolbar-title{color:#04b4ff}
-    .fc .fc-button{background:#04b4ff;border:0}
-    .fc-event{background:#04b4ff;border:0}
-  </style>
+  <meta http-equiv="refresh" content="300"><!-- reload every 5 min -->
+
+  <!-- FULLCALENDAR CSS -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/main.min.css"
+    rel="stylesheet"
+  />
+
+  <!-- FULLCALENDAR GLOBAL UMD BUNDLE -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/main.global.min.js"
+  ></script>
 </head>
+
 <body>
   <div id="calendar"></div>
   <script>
