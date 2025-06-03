@@ -1,19 +1,17 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- auto-refresh every 5 minutes so the wall display stays current -->
-  <meta http-equiv="refresh" content="300" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta http-equiv="refresh" content="300"/>
 
-  <!-- FullCalendar STANDARD bundle (core + dayGrid + timeGrid + list) -->
+  <!-- Core bundle (dayGrid included) -->
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js" defer></script>
 
   <!-- ICS support -->
   <script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/icalendar@6.1.11/index.global.min.js" defer></script>
 
-  <!-- simple dark branding -->
   <style>
     html,body{margin:0;height:100%;background:#111;color:#fff;font-family:system-ui}
     #calendar{height:100%}
@@ -27,20 +25,41 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
-        /* With the standard bundle we do NOT need a plugins[] array */
-        initialView   : 'dayGridMonth',
-        headerToolbar : { left: 'title', right: 'prev,next today' },
-        nowIndicator  : true,
+      new FullCalendar.Calendar(document.getElementById('calendar'), {
+        initialView     : 'dayGridMonth',
+        headerToolbar   : { left:'title', right:'prev,next today' },
+        nowIndicator    : true,
+        displayEventEnd : true,
+        eventTimeFormat : { hour:'2-digit', minute:'2-digit', meridiem:false },
 
-        /* Your Cloudflare Worker that proxies the Outlook .ics feed */
+        /* ⬇︎ custom renderer that appends duration */
+        eventContent(arg) {
+          /* default “09:00” or “09:00 – 10:30” text */
+          const top = document.createElement('div');
+          top.textContent = arg.timeText + ' • ' + arg.event.title;
+
+          /* duration line calculated from start/end */
+          const start = arg.event.start;
+          const end   = arg.event.end || start;   // fallback if no end
+          const mins  = Math.max(0, Math.round((end - start) / 60000));
+          const h     = Math.floor(mins / 60);
+          const m     = mins % 60;
+          const dur   = h ? `${h} h${m ? ' '+m+' m' : ''}` : `${m} m`;
+
+          const bottom = document.createElement('div');
+          bottom.style.fontSize = '0.75em';
+          bottom.style.opacity  = 0.8;
+          bottom.textContent    = dur;            // e.g. “1 h 30 m”
+
+          return { domNodes: [top, bottom] };
+        },
+
+        /* Outlook feed via Cloudflare Worker */
         events : {
           url   : 'https://modelokalelille.no-022.workers.dev',
           format: 'ics'
         }
-      });
-
-      calendar.render();
+      }).render();
     });
   </script>
 </body>
