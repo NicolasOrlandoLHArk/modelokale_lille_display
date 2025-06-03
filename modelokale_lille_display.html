@@ -1,17 +1,19 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="refresh" content="300">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- auto-refresh every 5 minutes so the wall display stays current -->
+  <meta http-equiv="refresh" content="300" />
 
-  <!-- FullCalendar core + the built-in dayGrid/timeGrid/list bundle -->
+  <!-- FullCalendar STANDARD bundle (core + dayGrid + timeGrid + list) -->
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js" defer></script>
 
   <!-- ICS support -->
   <script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/icalendar@6.1.11/index.global.min.js" defer></script>
 
+  <!-- simple dark branding -->
   <style>
     html,body{margin:0;height:100%;background:#111;color:#fff;font-family:system-ui}
     #calendar{height:100%}
@@ -24,26 +26,21 @@
   <div id="calendar"></div>
 
   <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      const cal = new FullCalendar.Calendar(document.getElementById('calendar'), {
-        /* ✅  BOTH plugins must be listed  */
-        plugins : [
-          FullCalendar.dayGridPlugin,
-          FullCalendar.icalendarPlugin      // lower-case “i”
-        ],
-
+    document.addEventListener('DOMContentLoaded', () => {
+      const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+        /* With the standard bundle we do NOT need a plugins[] array */
         initialView   : 'dayGridMonth',
-        headerToolbar : { left:'title', right:'prev,next today' },
+        headerToolbar : { left: 'title', right: 'prev,next today' },
         nowIndicator  : true,
 
-        /*  your Cloudflare Worker that proxies the Outlook .ics feed  */
+        /* Your Cloudflare Worker that proxies the Outlook .ics feed */
         events : {
           url   : 'https://modelokalelille.no-022.workers.dev',
           format: 'ics'
         }
       });
 
-      cal.render();
+      calendar.render();
     });
   </script>
 </body>
