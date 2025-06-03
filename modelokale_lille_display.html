@@ -2,15 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="refresh" content="300" /><!-- reload every 5 min -->
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta http-equiv="refresh" content="300" />
 
-  <!-- FullCalendar JS (served locally, no MIME problems) -->
-  <script src="index.global.min.js" defer></script>
+  <!-- FullCalendar 6.1.11 assets from cdnjs (correct MIME types) -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.11/fullcalendar.min.css"
+  />
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.11/index.global.min.js"
+    defer
+  ></script>
 
+  <!-- quick dark branding tweak -->
   <style>
-    html,body {margin:0;height:100%;background:#111;color:#fff}
-    #calendar  {height:100%;font-family:system-ui}
+    html,body {margin:0;height:100%;background:#111;color:#fff;font-family:system-ui}
+    #calendar {height:100%}
+
+    /* colours */
     .fc .fc-toolbar-title           {color:#04b4ff}
     .fc .fc-button,
     .fc .fc-button-primary          {background:#04b4ff;border:0}
@@ -21,14 +31,15 @@
   <div id="calendar"></div>
 
   <script>
-    // Wait for the JS bundle to load, then render the calendar
     window.addEventListener('DOMContentLoaded', () => {
       new FullCalendar.Calendar(document.getElementById('calendar'), {
-        initialView  : 'dayGridMonth',
-        headerToolbar: { left: 'title', right: 'prev,next today' },
-        nowIndicator : true,
-        events       : {
-          url   : 'https://modelokalelille.no-022.workers.dev',   //  ← your Cloudflare Worker
+        initialView   : 'dayGridMonth',
+        headerToolbar : { left:'title', right:'prev,next today' },
+        nowIndicator  : true,
+
+        /*  ← your Cloudflare Worker that proxies the .ics feed  */
+        events : {
+          url   : 'https://modelokalelille.no-022.workers.dev',
           format: 'ics'
         }
       }).render();
