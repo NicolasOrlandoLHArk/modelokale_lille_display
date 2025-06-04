@@ -75,11 +75,6 @@
           const top = document.createElement('div');
           top.textContent = arg.timeText + ' • ' + arg.event.title;
 
-          const bottom = document.createElement('div');
-          bottom.style.fontSize = '0.75em';
-          bottom.style.opacity  = 0.8;
-          bottom.textContent    = dur;            // e.g. “1 h 30 m”
-
           return { domNodes: [top, bottom] };
         },
 
