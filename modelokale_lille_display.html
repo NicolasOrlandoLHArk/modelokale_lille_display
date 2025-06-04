@@ -2,14 +2,13 @@
 <html lang="da">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- Refresh every 5 minutes -->
-  <meta http-equiv="refresh" content="300" />
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta http-equiv="refresh" content="300"/>
 
   <!-- FullCalendar standard bundle (core + dayGrid + timeGrid + list) -->
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js" defer></script>
 
-  <!-- Danish locale (must load before calendar initialization) -->
+  <!-- Danish locale (must load before calendar init) -->
   <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales/da.global.min.js"></script>
 
   <!-- ICS support -->
@@ -33,7 +32,7 @@
     .fc .fc-toolbar-title {
       color: #04b4ff;
     }
-    .fc .fc-button,
+    .fc .fc-button, 
     .fc .fc-button-primary {
       background: #04b4ff;
       border: 0;
@@ -43,15 +42,15 @@
       border: 0 !important;
     }
 
-    /* ✂️ OVERRIDE: Allow multi‐line event titles in month cells */
+    /* Allow multi‐line event titles and time ranges in month cells */
     .fc-daygrid-event > .fc-event-main-frame,
     .fc-daygrid-event > .fc-event-main-frame * {
       white-space: normal !important;
       overflow-wrap: break-word !important;
       word-break: break-word !important;
-      align-items: flex-start !important; /* keep text aligned at top */
+      align-items: flex-start !important;
     }
-    /* Optional: add some padding so wrapped text looks neat */
+    /* Add a bit of padding so wrapped text looks neat */
     .fc-daygrid-event {
       padding: 2px 4px !important;
     }
@@ -62,36 +61,29 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      new FullCalendar.Calendar(document.getElementById('calendar'), {
+      const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+        locale          : 'da',                     // Danish locale
         initialView     : 'dayGridMonth',
         headerToolbar   : { left:'title', right:'prev,next today' },
         nowIndicator    : true,
-        displayEventEnd : true,
+        displayEventEnd : true,                     // Show “09:00 – 10:30” instead of just “09:00” :contentReference[oaicite:7]{index=7}
+        displayEventTime: true,
         eventTimeFormat : { hour:'2-digit', minute:'2-digit', meridiem:false },
 
-        /* ⬇︎ custom renderer that appends duration */
+        /* Custom renderer: show “HH:mm – HH:mm • Title” only (no duration) */
         eventContent(arg) {
-          /* default “09:00” or “09:00 – 10:30” text */
-          const top = document.createElement('div');
-          top.textContent = arg.timeText + ' • ' + arg.event.title;
-
-          return { domNodes: [top, bottom] };
-        },
-
-        /* CUSTOM eventContent: time + title only, no duration line */
-        eventContent(arg) {
-          // Build a single <div> containing "09:00 – 10:30 • Mødeoverskrift"
           const container = document.createElement('div');
-          container.textContent = arg.timeText + ' • ' + arg.event.title;
+          container.textContent = arg.timeText + ' • ' + arg.event.title;   // arg.timeText already includes the range :contentReference[oaicite:8]{index=8}
           return { domNodes: [container] };
         },
 
         /* Outlook .ics feed via Cloudflare Worker */
         events: {
-          url: 'https://modelokalelille.no-022.workers.dev',
+          url   : 'https://modelokalelille.no-022.workers.dev',
           format: 'ics'
         }
       });
+
       calendar.render();
     });
   </script>
