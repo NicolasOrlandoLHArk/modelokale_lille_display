@@ -62,26 +62,25 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const calendarEl = document.getElementById('calendar');
-      const calendar = new FullCalendar.Calendar(calendarEl, {
-        /* FORCE Danish locale (loads da.global.min.js above) */
-        locale: 'da',
+      new FullCalendar.Calendar(document.getElementById('calendar'), {
+        initialView     : 'dayGridMonth',
+        headerToolbar   : { left:'title', right:'prev,next today' },
+        nowIndicator    : true,
+        displayEventEnd : true,
+        eventTimeFormat : { hour:'2-digit', minute:'2-digit', meridiem:false },
 
-        /* Use month view with Danish labels */
-        initialView: 'dayGridMonth',
-        headerToolbar: {
-          left: 'title',
-          right: 'prev,next today'
-        },
-        nowIndicator: true,
+        /* ⬇︎ custom renderer that appends duration */
+        eventContent(arg) {
+          /* default “09:00” or “09:00 – 10:30” text */
+          const top = document.createElement('div');
+          top.textContent = arg.timeText + ' • ' + arg.event.title;
 
-        /* 24h time, no duration under event */
-        displayEventEnd: false,    // hide end‐time (you can still show it via eventContent if needed)
-        displayEventTime: true,
-        eventTimeFormat: {
-          hour: '2-digit',
-          minute: '2-digit',
-          meridiem: false
+          const bottom = document.createElement('div');
+          bottom.style.fontSize = '0.75em';
+          bottom.style.opacity  = 0.8;
+          bottom.textContent    = dur;            // e.g. “1 h 30 m”
+
+          return { domNodes: [top, bottom] };
         },
 
         /* CUSTOM eventContent: time + title only, no duration line */
