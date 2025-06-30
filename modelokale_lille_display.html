@@ -5,13 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <meta http-equiv="refresh" content="300"/>
 
-  <!-- FullCalendar standard bundle (core + dayGrid + timeGrid + list) -->
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js" defer></script>
 
-  <!-- Danish locale (must load before calendar init) -->
-  <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales/da.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales/da.global.min.js" defer></script>
 
-  <!-- ICS support -->
   <script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/icalendar@6.1.11/index.global.min.js" defer></script>
 
@@ -62,18 +59,18 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
-        locale          : 'da',                     // Danish locale
+        locale          : 'da',                       // Danish locale
         initialView     : 'dayGridMonth',
         headerToolbar   : { left:'title', right:'prev,next today' },
         nowIndicator    : true,
-        displayEventEnd : true,                     // Show “09:00 – 10:30” instead of just “09:00” :contentReference[oaicite:7]{index=7}
+        displayEventEnd : true,                       // Show “09:00 – 10:30” instead of just “09:00”
         displayEventTime: true,
         eventTimeFormat : { hour:'2-digit', minute:'2-digit', meridiem:false },
 
         /* Custom renderer: show “HH:mm – HH:mm • Title” only (no duration) */
         eventContent(arg) {
           const container = document.createElement('div');
-          container.textContent = arg.timeText + ' • ' + arg.event.title;   // arg.timeText already includes the range :contentReference[oaicite:8]{index=8}
+          container.textContent = arg.timeText + ' • ' + arg.event.title;   // arg.timeText already includes the range
           return { domNodes: [container] };
         },
 
