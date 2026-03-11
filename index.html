@@ -82,7 +82,36 @@
       });
 
       calendar.render();
+
+    function updateLEDStatus() {
+      const now = new Date();
+      const allEvents = calendar.getEvents();
+      
+      // Check if any event is happening exactly right now
+      const isBusy = allEvents.some(event => {
+        return now >= event.start && now <= event.end;
+      });
+
+      // iiyama Intent Strings (standard for ProLite series)
+      const RED_INTENT = "com.iiyama.led.RED";
+      const GREEN_INTENT = "com.iiyama.led.GREEN";
+      
+      const targetIntent = isBusy ? RED_INTENT : GREEN_INTENT;
+
+      // Communicate with WallPanel Android Bridge
+      if (window.wallpanel && window.wallpanel.sendBroadcastIntent) {
+        window.wallpanel.sendBroadcastIntent(targetIntent, null);
+        console.log("Room busy: " + isBusy + " | Sent: " + targetIntent);
+      } else {
+        console.log("WallPanel bridge not found. Room status would be: " + (isBusy ? "RED" : "GREEN"));
+      }
+    }
+
+    // Check every 60 seconds to update the light if a meeting starts/ends
+    setInterval(updateLEDStatus, 60000);
+      
     });
   </script>
 </body>
 </html>
+
