@@ -83,43 +83,35 @@
 
       calendar.render();
 
-   // Create a visual indicator on the screen so we can see what the code is doing
-    const debugBar = document.createElement('div');
-    debugBar.style = "position:fixed; top:0; left:0; width:100%; height:10px; z-index:9999; background:gray;";
-    document.body.appendChild(debugBar);
-
-    function updateLEDStatus() {
-        const now = new Date();
-        const isBusy = calendar.getEvents().some(e => now >= e.start && now <= e.end);
-        
-        // Update the on-screen bar color
-        debugBar.style.backgroundColor = isBusy ? "red" : "green";
-
-        // ALL known iiyama/Android LED intents - we send them all to be sure
-        const intents = isBusy 
-            ? ["com.iiyama.led.RED", "com.android.server.service.led.red", "internal.led.red"] 
-            : ["com.iiyama.led.GREEN", "com.android.server.service.led.green", "internal.led.green"];
-
-        intents.forEach(intent => {
-            // Try Method A: REST API (thanksmister default)
-            fetch('http://localhost:2971/api/command', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ command: 'broadcast', action: intent })
-            }).catch(() => {});
-
-            // Try Method B: JS Bridge (if it exists)
-            if (window.wallpanel && window.wallpanel.sendBroadcastIntent) {
-                window.wallpanel.sendBroadcastIntent(intent, null);
-            }
-        });
-    }
-    setInterval(updateLEDStatus, 30000);
+  function updateLEDStatus() {
+    const now = new Date();
+    const isBusy = calendar.getEvents().some(e => now >= e.start && now <= e.end);
+    
+    // The 3 most common iiyama Intent Strings
+    const action = isBusy ? "com.iiyama.led.RED" : "com.iiyama.led.GREEN";
+    
+    // We send a POST request to WallPanel's own API to broadcast the intent to Android
+    fetch('http://localhost:2971/api/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            command: 'broadcast',
+            action: action,
+            extras: { "status": 1 } // Some iiyama models require this 'extra' bundle
+        })
+    })
+    .then(response => console.log("Sent " + action))
+    .catch(err => {
+        // If localhost fails, try the Tablet's actual IP address
+        console.error("Connection to WallPanel API failed. Ensure 'REST API' is ON in settings.");
+    });
+}
       
     });
   </script>
 </body>
 </html>
+
 
 
 
