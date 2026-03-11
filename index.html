@@ -83,35 +83,45 @@
 
       calendar.render();
 
-    function updateLEDStatus() {
-      const now = new Date();
-      const allEvents = calendar.getEvents();
-      
-      // Check if any event is happening exactly right now
-      const isBusy = allEvents.some(event => {
-        return now >= event.start && now <= event.end;
-      });
+   function updateLEDStatus() {
+        const now = new Date();
+        const allEvents = calendar.getEvents();
+        
+        // Check if current time falls between any event start and end
+        const isBusy = allEvents.some(event => {
+          return now >= event.start && now <= event.end;
+        });
 
-      // iiyama Intent Strings (standard for ProLite series)
-      const RED_INTENT = "com.iiyama.led.RED";
-      const GREEN_INTENT = "com.iiyama.led.GREEN";
-      
-      const targetIntent = isBusy ? RED_INTENT : GREEN_INTENT;
+        const RED_INTENT = "com.iiyama.led.RED";
+        const GREEN_INTENT = "com.iiyama.led.GREEN";
+        const targetIntent = isBusy ? RED_INTENT : GREEN_INTENT;
 
-      // Communicate with WallPanel Android Bridge
-      if (window.wallpanel && window.wallpanel.sendBroadcastIntent) {
-        window.wallpanel.sendBroadcastIntent(targetIntent, null);
-        console.log("Room busy: " + isBusy + " | Sent: " + targetIntent);
-      } else {
-        console.log("WallPanel bridge not found. Room status would be: " + (isBusy ? "RED" : "GREEN"));
+        // METHOD 1: Try JavaScript Bridge (if available in a future update)
+        if (window.wallpanel && window.wallpanel.sendBroadcastIntent) {
+            window.wallpanel.sendBroadcastIntent(targetIntent, null);
+            console.log("Sent via Bridge: " + targetIntent);
+        } 
+        // METHOD 2: Try REST API (Works on thanksmister if enabled)
+        else {
+            fetch('http://localhost:2971/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    command: 'broadcast',
+                    action: targetIntent
+                })
+            })
+            .then(() => console.log("Sent via REST API: " + targetIntent))
+            .catch(err => console.log("Bridge & API failed. Is REST API enabled in WallPanel?"));
+        }
       }
-    }
 
-    // Check every 60 seconds to update the light if a meeting starts/ends
-    setInterval(updateLEDStatus, 60000);
+      // Check every 60 seconds
+      setInterval(updateLEDStatus, 60000);
       
     });
   </script>
 </body>
 </html>
+
 
