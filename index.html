@@ -83,45 +83,43 @@
 
       calendar.render();
 
-   function updateLEDStatus() {
+   // Create a visual indicator on the screen so we can see what the code is doing
+    const debugBar = document.createElement('div');
+    debugBar.style = "position:fixed; top:0; left:0; width:100%; height:10px; z-index:9999; background:gray;";
+    document.body.appendChild(debugBar);
+
+    function updateLEDStatus() {
         const now = new Date();
-        const allEvents = calendar.getEvents();
+        const isBusy = calendar.getEvents().some(e => now >= e.start && now <= e.end);
         
-        // Check if current time falls between any event start and end
-        const isBusy = allEvents.some(event => {
-          return now >= event.start && now <= event.end;
-        });
+        // Update the on-screen bar color
+        debugBar.style.backgroundColor = isBusy ? "red" : "green";
 
-        const RED_INTENT = "com.iiyama.led.RED";
-        const GREEN_INTENT = "com.iiyama.led.GREEN";
-        const targetIntent = isBusy ? RED_INTENT : GREEN_INTENT;
+        // ALL known iiyama/Android LED intents - we send them all to be sure
+        const intents = isBusy 
+            ? ["com.iiyama.led.RED", "com.android.server.service.led.red", "internal.led.red"] 
+            : ["com.iiyama.led.GREEN", "com.android.server.service.led.green", "internal.led.green"];
 
-        // METHOD 1: Try JavaScript Bridge (if available in a future update)
-        if (window.wallpanel && window.wallpanel.sendBroadcastIntent) {
-            window.wallpanel.sendBroadcastIntent(targetIntent, null);
-            console.log("Sent via Bridge: " + targetIntent);
-        } 
-        // METHOD 2: Try REST API (Works on thanksmister if enabled)
-        else {
+        intents.forEach(intent => {
+            // Try Method A: REST API (thanksmister default)
             fetch('http://localhost:2971/api/command', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    command: 'broadcast',
-                    action: targetIntent
-                })
-            })
-            .then(() => console.log("Sent via REST API: " + targetIntent))
-            .catch(err => console.log("Bridge & API failed. Is REST API enabled in WallPanel?"));
-        }
-      }
+                body: JSON.stringify({ command: 'broadcast', action: intent })
+            }).catch(() => {});
 
-      // Check every 60 seconds
-      setInterval(updateLEDStatus, 60000);
+            // Try Method B: JS Bridge (if it exists)
+            if (window.wallpanel && window.wallpanel.sendBroadcastIntent) {
+                window.wallpanel.sendBroadcastIntent(intent, null);
+            }
+        });
+    }
+    setInterval(updateLEDStatus, 30000);
       
     });
   </script>
 </body>
 </html>
+
 
 
