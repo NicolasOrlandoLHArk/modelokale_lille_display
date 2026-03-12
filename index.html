@@ -84,28 +84,29 @@
       calendar.render();
 
   function updateLEDStatus() {
-      const now = new Date();
-      const allEvents = calendar.getEvents();
-      const isBusy = allEvents.some(event => now >= event.start && now <= event.end);
+  const now = new Date();
+  const allEvents = calendar.getEvents();
+  const isBusy = allEvents.some(event => now >= event.start && now <= event.end);
 
-      // iiyama standard intents
-      const action = isBusy ? "com.iiyama.led.RED" : "com.iiyama.led.GREEN";
+  // We will try the three most common intent patterns for iiyama B3PNR models
+  const actions = isBusy 
+    ? ["com.iiyama.led.RED", "com.android.server.service.led.red", "iiyama.intent.action.LED_RED"] 
+    : ["com.iiyama.led.GREEN", "com.android.server.service.led.green", "iiyama.intent.action.LED_GREEN"];
 
-      console.log("Status: " + (isBusy ? "Busy" : "Free") + ". Sending to API...");
-
-      // We call the WallPanel API on the local device
-      fetch('http://localhost:2971/api/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          command: 'broadcast',
-          action: action,
-          extras: { "status": 1 } // Tells the iiyama driver to 'activate' the color
-        })
+  actions.forEach(action => {
+    fetch('http://localhost:2971/api/command', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        command: 'broadcast',
+        action: action,
+        extras: { "status": 1 } // Required for some B3PNR firmware
       })
-      .then(res => console.log("LED Command Sent Successfully"))
-      .catch(err => console.error("Could not reach WallPanel API. Is 'Enable Rest API' ON?"));
-    }
+    }).catch(err => console.error("API unreachable. Port 2971 must be enabled in WallPanel."));
+  });
+  
+  console.log("Sent " + (isBusy ? "RED" : "GREEN") + " broadcast cluster.");
+}
 
     // Re-check every 60 seconds
     setInterval(updateLEDStatus, 60000);
@@ -113,6 +114,7 @@
   </script>
 </body>
 </html>
+
 
 
 
