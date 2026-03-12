@@ -83,29 +83,28 @@
 
       calendar.render();
 
-  function updateLEDStatus() {
+ function updateLEDStatus() {
   const now = new Date();
   const allEvents = calendar.getEvents();
   const isBusy = allEvents.some(event => now >= event.start && now <= event.end);
 
-  // We will try the three most common intent patterns for iiyama B3PNR models
-  const actions = isBusy 
-    ? ["com.iiyama.led.RED", "com.android.server.service.led.red", "iiyama.intent.action.LED_RED"] 
-    : ["com.iiyama.led.GREEN", "com.android.server.service.led.green", "iiyama.intent.action.LED_GREEN"];
+  // Hex values from your documentation: 0x04 for Red, 0x06 for Green
+  const colorHex = isBusy ? "0x04" : "0x06"; 
+  const shellCommand = `echo w ${colorHex} > /sys/devices/platform/led_con_h/zigbee_reset`;
 
-  actions.forEach(action => {
-    fetch('http://localhost:2971/api/command', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        command: 'broadcast',
-        action: action,
-        extras: { "status": 1 } // Required for some B3PNR firmware
-      })
-    }).catch(err => console.error("API unreachable. Port 2971 must be enabled in WallPanel."));
-  });
-  
-  console.log("Sent " + (isBusy ? "RED" : "GREEN") + " broadcast cluster.");
+  console.log("Room " + (isBusy ? "BUSY (RED)" : "FREE (GREEN)"));
+
+  // Send the shell command to the WallPanel API
+  fetch('http://localhost:2971/api/command', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      command: 'exec',
+      data: shellCommand
+    })
+  })
+  .then(() => console.log("System command executed: " + colorHex))
+  .catch(err => console.error("Could not reach WallPanel API. Is 'Rest API' enabled?"));
 }
 
     // Re-check every 60 seconds
@@ -114,6 +113,7 @@
   </script>
 </body>
 </html>
+
 
 
 
