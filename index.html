@@ -84,33 +84,36 @@
       calendar.render();
 
   function updateLEDStatus() {
-    const now = new Date();
-    const isBusy = calendar.getEvents().some(e => now >= e.start && now <= e.end);
-    
-    // The 3 most common iiyama Intent Strings
-    const action = isBusy ? "com.iiyama.led.RED" : "com.iiyama.led.GREEN";
-    
-    // We send a POST request to WallPanel's own API to broadcast the intent to Android
-    fetch('http://localhost:2971/api/command', {
+      const now = new Date();
+      const allEvents = calendar.getEvents();
+      const isBusy = allEvents.some(event => now >= event.start && now <= event.end);
+
+      // iiyama standard intents
+      const action = isBusy ? "com.iiyama.led.RED" : "com.iiyama.led.GREEN";
+
+      console.log("Status: " + (isBusy ? "Busy" : "Free") + ". Sending to API...");
+
+      // We call the WallPanel API on the local device
+      fetch('http://localhost:2971/api/command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            command: 'broadcast',
-            action: action,
-            extras: { "status": 1 } // Some iiyama models require this 'extra' bundle
+          command: 'broadcast',
+          action: action,
+          extras: { "status": 1 } // Tells the iiyama driver to 'activate' the color
         })
-    })
-    .then(response => console.log("Sent " + action))
-    .catch(err => {
-        // If localhost fails, try the Tablet's actual IP address
-        console.error("Connection to WallPanel API failed. Ensure 'REST API' is ON in settings.");
-    });
-}
-      
-    });
+      })
+      .then(res => console.log("LED Command Sent Successfully"))
+      .catch(err => console.error("Could not reach WallPanel API. Is 'Enable Rest API' ON?"));
+    }
+
+    // Re-check every 60 seconds
+    setInterval(updateLEDStatus, 60000);
+  });
   </script>
 </body>
 </html>
+
 
 
 
