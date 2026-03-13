@@ -2,44 +2,67 @@
 <html lang="da">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <meta http-equiv="refresh" content="300"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta http-equiv="refresh" content="300" />
 
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js" defer></script>
-
   <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales/da.global.min.js" defer></script>
-
   <script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/icalendar@6.1.11/index.global.min.js" defer></script>
 
   <style>
-    /* Full‐screen dark background */
     html, body {
       margin: 0;
       height: 100%;
       background: #111;
       color: #fff;
-      font-family: system-ui;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
+
+    body[data-room-state="free"] {
+      background: #111;
+    }
+
+    body[data-room-state="busy"] {
+      background: #1a1111;
+    }
+
+    body[data-room-state="unknown"] {
+      background: #111318;
+    }
+
     #calendar {
       height: 100%;
     }
 
-    /* Toolbar button colors */
     .fc .fc-toolbar-title {
       color: #04b4ff;
+      font-weight: 700;
     }
-    .fc .fc-button, 
+
+    .fc .fc-button,
     .fc .fc-button-primary {
       background: #04b4ff;
       border: 0;
+      box-shadow: none;
     }
+
+    .fc .fc-button:hover,
+    .fc .fc-button-primary:hover {
+      background: #0299db;
+    }
+
+    .fc .fc-button:focus,
+    .fc .fc-button-primary:focus {
+      box-shadow: none !important;
+    }
+
     .fc-event {
       background: #04b4ff !important;
       border: 0 !important;
+      border-radius: 4px;
     }
 
-    /* Allow multi‐line event titles and time ranges in month cells */
     .fc-daygrid-event > .fc-event-main-frame,
     .fc-daygrid-event > .fc-event-main-frame * {
       white-space: normal !important;
@@ -47,75 +70,139 @@
       word-break: break-word !important;
       align-items: flex-start !important;
     }
-    /* Add a bit of padding so wrapped text looks neat */
+
     .fc-daygrid-event {
       padding: 2px 4px !important;
     }
+
+    #state-indicator {
+      position: fixed;
+      right: 12px;
+      bottom: 12px;
+      z-index: 9999;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(4px);
+      user-select: none;
+      pointer-events: none;
+    }
+
+    body[data-room-state="free"] #state-indicator {
+      background: rgba(0, 128, 0, 0.75);
+    }
+
+    body[data-room-state="busy"] #state-indicator {
+      background: rgba(180, 0, 0, 0.8);
+    }
+
+    body[data-room-state="unknown"] #state-indicator {
+      background: rgba(0, 70, 150, 0.8);
+    }
   </style>
 </head>
-<body>
+<body data-room-state="unknown">
   <div id="calendar"></div>
+  <div id="state-indicator">Status: Ukendt</div>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
-        locale          : 'da',                       // Danish locale
-        initialView     : 'dayGridMonth',
-        headerToolbar   : { left:'title', right:'prev,next today' },
-        nowIndicator    : true,
-        displayEventEnd : true,                       // Show “09:00 – 10:30” instead of just “09:00”
-        displayEventTime: true,
-        eventTimeFormat : { hour:'2-digit', minute:'2-digit', meridiem:false },
+      const calendarEl = document.getElementById('calendar');
+      const stateIndicatorEl = document.getElementById('state-indicator');
 
-        /* Custom renderer: show “HH:mm – HH:mm • Title” only (no duration) */
+      function setRoomState(state) {
+        const normalizedState = ['busy', 'free', 'unknown'].includes(state) ? state : 'unknown';
+        document.body.dataset.roomState = normalizedState;
+
+        if (normalizedState === 'busy') {
+          stateIndicatorEl.textContent = 'Status: Optaget';
+        } else if (normalizedState === 'free') {
+          stateIndicatorEl.textContent = 'Status: Ledigt';
+        } else {
+          stateIndicatorEl.textContent = 'Status: Ukendt';
+        }
+
+        console.log('roomState =', normalizedState);
+      }
+
+      function isEventActiveNow(event, now) {
+        if (!event.start) return false;
+
+        const start = event.start;
+        const end = event.end || event.start;
+
+        if (event.allDay) {
+          return now >= start && now < end;
+        }
+
+        return now >= start && now < end;
+      }
+
+      function updateRoomState() {
+        try {
+          const now = new Date();
+          const allEvents = calendar.getEvents();
+          const isBusy = allEvents.some(event => isEventActiveNow(event, now));
+          setRoomState(isBusy ? 'busy' : 'free');
+        } catch (error) {
+          console.error('Failed to compute room state:', error);
+          setRoomState('unknown');
+        }
+      }
+
+      const calendar = new FullCalendar.Calendar(calendarEl, {
+        locale: 'da',
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+          left: 'title',
+          right: 'prev,next today'
+        },
+        nowIndicator: true,
+        displayEventEnd: true,
+        displayEventTime: true,
+        eventTimeFormat: {
+          hour: '2-digit',
+          minute: '2-digit',
+          meridiem: false
+        },
+
         eventContent(arg) {
           const container = document.createElement('div');
-          container.textContent = arg.timeText + ' • ' + arg.event.title;   // arg.timeText already includes the range
+          container.textContent = arg.timeText
+            ? `${arg.timeText} • ${arg.event.title}`
+            : arg.event.title;
           return { domNodes: [container] };
         },
 
-        /* Outlook .ics feed via Cloudflare Worker */
         events: {
-          url   : 'https://modelokalelille.no-022.workers.dev',
+          url: 'https://modelokalelille.no-022.workers.dev',
           format: 'ics'
+        },
+
+        loading(isLoading) {
+          if (!isLoading) {
+            updateRoomState();
+          }
+        },
+
+        eventsSet() {
+          updateRoomState();
+        },
+
+        eventDidMount() {
+          updateRoomState();
         }
       });
 
       calendar.render();
 
- function updateLEDStatus() {
-  const now = new Date();
-  const allEvents = calendar.getEvents();
-  const isBusy = allEvents.some(event => now >= event.start && now <= event.end);
-
-  // Hex values from your documentation: 0x04 for Red, 0x06 for Green
-  const colorHex = isBusy ? "0x04" : "0x06"; 
-  const shellCommand = `echo w ${colorHex} > /sys/devices/platform/led_con_h/zigbee_reset`;
-
-  console.log("Room " + (isBusy ? "BUSY (RED)" : "FREE (GREEN)"));
-
-  // Send the shell command to the WallPanel API
-  fetch('http://localhost:2971/api/command', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      command: 'exec',
-      data: shellCommand
-    })
-  })
-  .then(() => console.log("System command executed: " + colorHex))
-  .catch(err => console.error("Could not reach WallPanel API. Is 'Rest API' enabled?"));
-}
-
-    // Re-check every 60 seconds
-    setInterval(updateLEDStatus, 60000);
-  });
+      setTimeout(updateRoomState, 2000);
+      setInterval(updateRoomState, 60000);
+    });
   </script>
 </body>
 </html>
-
-
-
-
-
-
