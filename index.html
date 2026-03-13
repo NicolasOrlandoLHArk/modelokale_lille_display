@@ -19,18 +19,6 @@
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
-    body[data-room-state="free"] {
-      background: #111;
-    }
-
-    body[data-room-state="busy"] {
-      background: #1a1111;
-    }
-
-    body[data-room-state="unknown"] {
-      background: #111318;
-    }
-
     #calendar {
       height: 100%;
     }
@@ -84,24 +72,8 @@
       border-radius: 999px;
       font-size: 14px;
       font-weight: 700;
-      letter-spacing: 0.02em;
       color: #fff;
       background: rgba(0, 0, 0, 0.45);
-      backdrop-filter: blur(4px);
-      user-select: none;
-      pointer-events: none;
-    }
-
-    body[data-room-state="free"] #state-indicator {
-      background: rgba(0, 128, 0, 0.75);
-    }
-
-    body[data-room-state="busy"] #state-indicator {
-      background: rgba(180, 0, 0, 0.8);
-    }
-
-    body[data-room-state="unknown"] #state-indicator {
-      background: rgba(0, 70, 150, 0.8);
     }
   </style>
 </head>
@@ -111,34 +83,28 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const calendarEl = document.getElementById('calendar');
       const stateIndicatorEl = document.getElementById('state-indicator');
+      const calendarEl = document.getElementById('calendar');
 
       function setRoomState(state) {
-        const normalizedState = ['busy', 'free', 'unknown'].includes(state) ? state : 'unknown';
-        document.body.dataset.roomState = normalizedState;
+        const normalized = ['busy', 'free', 'unknown'].includes(state) ? state : 'unknown';
+        document.body.dataset.roomState = normalized;
 
-        if (normalizedState === 'busy') {
+        if (normalized === 'busy') {
           stateIndicatorEl.textContent = 'Status: Optaget';
-        } else if (normalizedState === 'free') {
+        } else if (normalized === 'free') {
           stateIndicatorEl.textContent = 'Status: Ledigt';
         } else {
           stateIndicatorEl.textContent = 'Status: Ukendt';
         }
 
-        console.log('roomState =', normalizedState);
+        console.log('roomState =', normalized);
       }
 
       function isEventActiveNow(event, now) {
         if (!event.start) return false;
-
         const start = event.start;
         const end = event.end || event.start;
-
-        if (event.allDay) {
-          return now >= start && now < end;
-        }
-
         return now >= start && now < end;
       }
 
@@ -148,8 +114,8 @@
           const allEvents = calendar.getEvents();
           const isBusy = allEvents.some(event => isEventActiveNow(event, now));
           setRoomState(isBusy ? 'busy' : 'free');
-        } catch (error) {
-          console.error('Failed to compute room state:', error);
+        } catch (e) {
+          console.error('Failed to compute room state', e);
           setRoomState('unknown');
         }
       }
@@ -157,18 +123,11 @@
       const calendar = new FullCalendar.Calendar(calendarEl, {
         locale: 'da',
         initialView: 'dayGridMonth',
-        headerToolbar: {
-          left: 'title',
-          right: 'prev,next today'
-        },
+        headerToolbar: { left: 'title', right: 'prev,next today' },
         nowIndicator: true,
         displayEventEnd: true,
         displayEventTime: true,
-        eventTimeFormat: {
-          hour: '2-digit',
-          minute: '2-digit',
-          meridiem: false
-        },
+        eventTimeFormat: { hour: '2-digit', minute: '2-digit', meridiem: false },
 
         eventContent(arg) {
           const container = document.createElement('div');
@@ -184,22 +143,15 @@
         },
 
         loading(isLoading) {
-          if (!isLoading) {
-            updateRoomState();
-          }
+          if (!isLoading) updateRoomState();
         },
 
         eventsSet() {
-          updateRoomState();
-        },
-
-        eventDidMount() {
           updateRoomState();
         }
       });
 
       calendar.render();
-
       setTimeout(updateRoomState, 2000);
       setInterval(updateRoomState, 60000);
     });
