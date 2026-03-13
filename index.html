@@ -2,18 +2,15 @@
 <html lang="da">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <meta http-equiv="refresh" content="300"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta http-equiv="refresh" content="300" />
 
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js" defer></script>
-
   <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales/da.global.min.js" defer></script>
-
   <script src="https://cdn.jsdelivr.net/npm/ical.js@1.5.0/build/ical.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/icalendar@6.1.11/index.global.min.js" defer></script>
 
   <style>
-    /* Full‐screen dark background */
     html, body {
       margin: 0;
       height: 100%;
@@ -21,25 +18,26 @@
       color: #fff;
       font-family: system-ui;
     }
+
     #calendar {
       height: 100%;
     }
 
-    /* Toolbar button colors */
     .fc .fc-toolbar-title {
       color: #04b4ff;
     }
-    .fc .fc-button, 
+
+    .fc .fc-button,
     .fc .fc-button-primary {
       background: #04b4ff;
       border: 0;
     }
+
     .fc-event {
       background: #04b4ff !important;
       border: 0 !important;
     }
 
-    /* Allow multi‐line event titles and time ranges in month cells */
     .fc-daygrid-event > .fc-event-main-frame,
     .fc-daygrid-event > .fc-event-main-frame * {
       white-space: normal !important;
@@ -47,7 +45,7 @@
       word-break: break-word !important;
       align-items: flex-start !important;
     }
-    /* Add a bit of padding so wrapped text looks neat */
+
     .fc-daygrid-event {
       padding: 2px 4px !important;
     }
@@ -58,65 +56,120 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
-        locale          : 'da',                       // Danish locale
-        initialView     : 'dayGridMonth',
-        headerToolbar   : { left:'title', right:'prev,next today' },
-        nowIndicator    : true,
-        displayEventEnd : true,                       // Show “09:00 – 10:30” instead of just “09:00”
-        displayEventTime: true,
-        eventTimeFormat : { hour:'2-digit', minute:'2-digit', meridiem:false },
+      let lastLedState = null;
 
-        /* Custom renderer: show “HH:mm – HH:mm • Title” only (no duration) */
+      function sendLedCommand(shellCommand) {
+        console.log("LED command:", shellCommand);
+
+        try {
+          if (typeof adbcommand === 'function') {
+            adbcommand(shellCommand);
+            console.log("LED command sent via adbcommand()");
+            return;
+          }
+        } catch (err) {
+          console.error("adbcommand() failed:", err);
+        }
+
+        console.warn("adbcommand() is not available in this WebView.");
+      }
+
+      function setLedState(state) {
+        if (state === lastLedState) {
+          return;
+        }
+
+        lastLedState = state;
+
+        // Safer to use the documented simple values for red/green.
+        // 0x04 = red, 0x06 = green.
+        // Custom RGB is also supported as 0x66RRGGBB if you want later.
+        let shellCommand = null;
+
+        if (state === 'busy') {
+          shellCommand = 'echo w 0x04 > /sys/devices/platform/led_con_h/zigbee_reset';
+          console.log('Room BUSY -> RED');
+        } else if (state === 'free') {
+          shellCommand = 'echo w 0x06 > /sys/devices/platform/led_con_h/zigbee_reset';
+          console.log('Room FREE -> GREEN');
+        } else {
+          // Optional fallback: blue for unknown/error using custom RGB
+          shellCommand = 'echo w 0x660000ff > /sys/devices/platform/led_con_h/zigbee_reset';
+          console.log('Room UNKNOWN -> BLUE');
+        }
+
+        sendLedCommand(shellCommand);
+      }
+
+      function isEventActiveNow(event, now) {
+        if (!event.start) return false;
+
+        const start = event.start;
+        const end = event.end || event.start;
+
+        // FullCalendar all-day events are usually not relevant for room occupancy,
+        // unless you explicitly want them to block the room.
+        if (event.allDay) {
+          return now >= start && now < end;
+        }
+
+        return now >= start && now < end;
+      }
+
+      function updateLEDStatus(calendar) {
+        try {
+          const now = new Date();
+          const allEvents = calendar.getEvents();
+          const isBusy = allEvents.some(event => isEventActiveNow(event, now));
+
+          setLedState(isBusy ? 'busy' : 'free');
+        } catch (err) {
+          console.error("Failed to evaluate room state:", err);
+          setLedState('error');
+        }
+      }
+
+      const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+        locale: 'da',
+        initialView: 'dayGridMonth',
+        headerToolbar: { left: 'title', right: 'prev,next today' },
+        nowIndicator: true,
+        displayEventEnd: true,
+        displayEventTime: true,
+        eventTimeFormat: { hour: '2-digit', minute: '2-digit', meridiem: false },
+
         eventContent(arg) {
           const container = document.createElement('div');
-          container.textContent = arg.timeText + ' • ' + arg.event.title;   // arg.timeText already includes the range
+          container.textContent = arg.timeText
+            ? `${arg.timeText} • ${arg.event.title}`
+            : arg.event.title;
           return { domNodes: [container] };
         },
 
-        /* Outlook .ics feed via Cloudflare Worker */
         events: {
-          url   : 'https://modelokalelille.no-022.workers.dev',
+          url: 'https://modelokalelille.no-022.workers.dev',
           format: 'ics'
+        },
+
+        loading(isLoading) {
+          if (!isLoading) {
+            updateLEDStatus(calendar);
+          }
+        },
+
+        eventsSet() {
+          updateLEDStatus(calendar);
         }
       });
 
       calendar.render();
 
- function updateLEDStatus() {
-  const now = new Date();
-  const allEvents = calendar.getEvents();
-  const isBusy = allEvents.some(event => now >= event.start && now <= event.end);
+      // Set LED immediately on first render as well
+      setTimeout(() => updateLEDStatus(calendar), 2000);
 
-  // Hex values from your documentation: 0x04 for Red, 0x06 for Green
-  const colorHex = isBusy ? "0x04" : "0x06"; 
-  const shellCommand = `echo w ${colorHex} > /sys/devices/platform/led_con_h/zigbee_reset`;
-
-  console.log("Room " + (isBusy ? "BUSY (RED)" : "FREE (GREEN)"));
-
-  // Send the shell command to the WallPanel API
-  fetch('http://localhost:2971/api/command', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      command: 'exec',
-      data: shellCommand
-    })
-  })
-  .then(() => console.log("System command executed: " + colorHex))
-  .catch(err => console.error("Could not reach WallPanel API. Is 'Rest API' enabled?"));
-}
-
-    // Re-check every 60 seconds
-    setInterval(updateLEDStatus, 60000);
-  });
+      // Re-check every 60 seconds
+      setInterval(() => updateLEDStatus(calendar), 60000);
+    });
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
